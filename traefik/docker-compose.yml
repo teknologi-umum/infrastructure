@@ -1,0 +1,120 @@
+services:
+  traefik:
+    image: traefik:v2.10.3
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.file.directory=/confs"
+      - "--ping=true"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.tlsresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.tlsresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.tlsresolver.acme.email=opensource@teknologiumum.com"
+      - "--certificatesresolvers.tlsresolver.acme.storage=/letsencrypt/acme.json"
+      - "--entrypoints.web.http3"
+      - "--entrypoints.websecure.http3"
+      - "--global.sendanonymoususage=true"
+      - "--log.level=INFO"
+    environment:
+      - TZ=UTC
+    ports:
+      # The HTTP port
+      - "0.0.0.0:80:80"
+      - "[::]:80:80"
+      - "0.0.0.0:443:443/tcp"
+      - "[::]:443:443/tcp"
+      - "0.0.0.0:443:443/udp"
+      - "[::]:443:443/udp"
+      # The Web UI (enabled by --api.insecure=true)
+      - "192.168.193.179:8080:8080"
+    platform: linux/amd64
+    storage_opt:
+      size: '1G'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+      - "./letsencrypt:/letsencrypt"
+      - "./confs:/confs"
+    healthcheck:
+      test: traefik healthcheck --ping
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        # max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 4GB
+          cpus: '4'
+        reservations:
+          memory: 100MB
+          cpus: '0.10'
+    networks:
+      - pesto
+      - hacktoberfest
+      - gitgram
+      - default
+      - captcha
+      - mastodon
+      - polarite
+      - libreddit
+      - graphene
+      - tgif
+      - zod_playground
+      - projects
+      - ohmyform_external
+      - calcom_external
+      - nitter
+      - focalboard_external
+
+networks:
+  pesto:
+    driver: bridge
+    external: true
+  hacktoberfest:
+    driver: bridge
+    external: true
+  gitgram:
+    driver: bridge
+    external: true
+  captcha:
+    driver: bridge
+    external: true
+  mastodon:
+    driver: bridge
+    external: true
+  polarite:
+    driver: bridge
+    external: true
+  libreddit:
+    driver: bridge
+    external: true
+  graphene:
+    driver: bridge
+    external: true
+  tgif:
+    driver: bridge
+    external: true
+  zod_playground:
+    driver: bridge
+    external: true
+  projects:
+    driver: bridge
+    external: true
+  nitter:
+    external: true

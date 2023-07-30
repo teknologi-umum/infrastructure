@@ -1,0 +1,131 @@
+services:
+  nitter:
+    image: zedeus/nitter:latest
+    environment:
+      BLUR_NSFW: on
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=nitter"
+      - "traefik.http.routers.nitter.entrypoints=web,websecure"
+      - "traefik.http.routers.nitter.rule=Host(`nitter.teknologiumum.com`)"
+      - "traefik.http.routers.nitter.priority=1"
+      - "traefik.http.routers.nitter.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.nitter.middlewares=nitter-header,nitter-rate,nitter-redirectscheme"
+      - "traefik.http.services.nitter.loadbalancer.server.port=8080"
+      - "traefik.http.services.nitter.loadbalancer.server.scheme=http"
+      - "traefik.http.services.nitter.loadbalancer.healthcheck.interval=120s"
+      - "traefik.http.services.nitter.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.nitter-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.nitter-rate.ratelimit.burst=20"
+      - "traefik.http.middlewares.nitter-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.nitter-header.headers.accesscontrolallowmethods=GET,OPTIONS"
+      - "traefik.http.middlewares.nitter-header.headers.accesscontrolalloworiginlist=https://teknologiumum.com"
+      - "traefik.http.middlewares.nitter-header.headers.accesscontrolmaxage=604800"
+      - "traefik.http.middlewares.nitter-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.nitter-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.nitter-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.nitter-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.nitter-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.nitter-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.nitter-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.nitter-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.nitter-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.nitter-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    volumes:
+      - ./nitter.conf:/src/nitter.conf:Z,ro
+    storage_opt:
+      size: '1G'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    healthcheck:
+      test: wget -nv --tries=1 --spider http://127.0.0.1:8080/Jack/status/20 || exit 1
+      interval: 60s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 300MB
+          cpus: '1'
+        reservations:
+          memory: 25MB
+          cpus: '0.10'
+    user: "998:998"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      nitter:
+        ipv4_address: 10.1.7.20
+      nitter_internal:
+    depends_on:
+      nitter-redis:
+        condition: service_healthy
+
+  nitter-redis:
+    image: redis:6-alpine
+    container_name: nitter-redis
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - nitter-redis:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 750MB
+          cpus: '1'
+        reservations:
+          memory: 25MB
+          cpus: '0.10'
+    healthcheck:
+      test: redis-cli ping
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    user: "999:1000"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      nitter_internal:
+
+volumes:
+  nitter-redis:
+
+networks:
+  nitter:
+    external: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.1.7.0/28
+  nitter_internal:
+    external: false
+    ipam:
+      config:
+        - subnet: 10.1.7.16/28

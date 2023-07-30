@@ -1,0 +1,34 @@
+# The Caddyfile is an easy way to configure your Caddy web server.
+#
+# Unless the file starts with a global options block, the first
+# uncommented line is always the address of your site.
+#
+# To use your own domain name (with automatic HTTPS), first make
+# sure your domain's A/AAAA DNS records are properly pointed to
+# this machine's public IP, then replace ":80" below with your
+# domain name.
+
+status.teknologiumum.com {
+  reverse_proxy 127.0.0.1:43241 {
+    transport http {
+      compression on
+    }
+  }
+
+  header {
+    server "Teknologi Umum"
+    ?Permissions-Policy interest-cohort=()
+    ?strict-transport-security "max-age=604800; includeSubDomains"
+    ?x-content-type-options nosniff
+    ?x-frame-options DENY
+    ?referrer-policy no-referrer-when-downgrade
+    ?content-security-policy "default-src 'none'; font-src 'self'; script-src 'self' blob:; manifest-src 'self'; media-src 'self' data: blob: about:; style-src 'self' 'unsafe-inline'; base-uri 'none'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; connect-src 'self'; worker-src blob:;"
+    ?vary Origin
+    ?x-xss-protection "1; mode=block"
+  }
+
+  tls opensource@teknologiumum.com
+}
+
+# Refer to the Caddy docs for more information:
+# https://caddyserver.com/docs/caddyfile

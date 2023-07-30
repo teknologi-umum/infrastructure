@@ -1,0 +1,71 @@
+services:
+  app:
+    image: ghcr.io/teknologi-umum/polarite:edge
+    environment:
+      ENVIRONMENT: production
+      PORT: 3000
+      TZ: UTC
+      SENTRY_DSN: ${SENTRY_DSN}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.polarite.entrypoints=web,websecure"
+      - "traefik.http.routers.polarite.rule=Host(`polarite.teknologiumum.com`)"
+      - "traefik.http.routers.polarite.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.polarite.middlewares=polarite-header,polarite-rate,polarite-redirectscheme,polarite-compress"
+      - "traefik.http.services.polarite.loadbalancer.server.port=3000"
+      - "traefik.http.services.polarite.loadbalancer.server.scheme=http"
+      - "traefik.http.services.polarite.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.polarite.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.polarite-compress.compress=true"
+      - "traefik.http.middlewares.polarite-compress.compress.minresponsebodybytes=128"
+      - "traefik.http.middlewares.polarite-rate.ratelimit.average=250"
+      - "traefik.http.middlewares.polarite-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.polarite-rate.ratelimit.period=1m"
+      - "traefik.http.middlewares.polarite-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.polarite-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.polarite-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.polarite-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.polarite-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.polarite-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.polarite-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.polarite-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.polarite-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.polarite-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    healthcheck:
+      test: curl -f http://localhost:3000/ || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 750MB
+          cpus: '2'
+        reservations:
+          memory: 100MB
+          cpus: '0.10'
+    networks:
+      - polarite
+    logging:
+      driver: json-file
+      options:
+        max-size: 100M
+        max-file: 3
+    volumes:
+      - ./data/:/app/data/
+
+networks:
+  polarite:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 10.2.9.0/28

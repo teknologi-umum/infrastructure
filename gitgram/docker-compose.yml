@@ -1,0 +1,132 @@
+services:
+  gitgram_teknum:
+    image: ghcr.io/teknologi-umum/gitgram:edge
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      WEBHOOK_SECRET: ${TEKNUM_WEBHOOK_SECRET}
+      BOT_TOKEN: ${TEKNUM_BOT_SECRET}
+      HOME_GROUP: ${TEKNUM_HOME_GROUP}
+      IGNORE_PRIVATE_REPOSITORY: true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitgram_teknum.entrypoints=web,websecure"
+      - "traefik.http.routers.gitgram_teknum.rule=Host(`teknum.gitgram.teknologiumum.com`)"
+      - "traefik.http.routers.gitgram_teknum.priority=1"
+      - "traefik.http.routers.gitgram_teknum.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.gitgram_teknum.middlewares=gitgram_teknum-header,gitgram_teknum-rate,gitgram_teknum-redirectscheme"
+      - "traefik.http.services.gitgram_teknum.loadbalancer.server.port=3000"
+      - "traefik.http.services.gitgram_teknum.loadbalancer.server.scheme=http"
+      - "traefik.http.services.gitgram_teknum.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.gitgram_teknum.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.gitgram_teknum-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.gitgram_teknum-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.gitgram_teknum-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.gitgram_teknum-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.gitgram_teknum-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.gitgram_teknum-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    healthcheck:
+      test: curl -f http://localhost:3000/ || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 300MB
+          cpus: '0.75'
+        reservations:
+          memory: 100MB
+          cpus: '0.10'
+    networks:
+      - gitgram
+    logging:
+      driver: json-file
+      options:
+        max-size: 10M
+        max-file: 3
+
+  gitgram_tokobapak:
+    image: ghcr.io/teknologi-umum/gitgram:edge
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      WEBHOOK_SECRET: ${TOKOBAPAK_WEBHOOK_SECRET}
+      BOT_TOKEN: ${TOKOBAPAK_BOT_TOKEN}
+      HOME_GROUP: ${TOKOBAPAK_HOME_GROUP}
+      IGNORE_PRIVATE_REPOSITORY: true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gitgram_tokobapak.entrypoints=web,websecure"
+      - "traefik.http.routers.gitgram_tokobapak.rule=Host(`tokobapak.gitgram.teknologiumum.com`)"
+      - "traefik.http.routers.gitgram_tokobapak.priority=1"
+      - "traefik.http.routers.gitgram_tokobapak.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.gitgram_tokobapak.middlewares=gitgram_tokobapak-header,gitgram_tokobapak-rate,gitgram_tokobapak-redirectscheme"
+      - "traefik.http.services.gitgram_tokobapak.loadbalancer.server.port=3000"
+      - "traefik.http.services.gitgram_tokobapak.loadbalancer.server.scheme=http"
+      - "traefik.http.services.gitgram_tokobapak.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.gitgram_tokobapak.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.gitgram_tokobapak-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.gitgram_tokobapak-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.gitgram_tokobapak-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.gitgram_tokobapak-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.gitgram_tokobapak-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.gitgram_tokobapak-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    healthcheck:
+      test: curl -f http://localhost:3000/ || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 300MB
+          cpus: '0.75'
+        reservations:
+          memory: 100MB
+          cpus: '0.10'
+    networks:
+      - gitgram
+    logging:
+      driver: json-file
+      options:
+        max-size: 100M
+        max-file: 3
+
+networks:
+  gitgram:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 10.2.3.0/28

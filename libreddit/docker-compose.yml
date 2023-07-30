@@ -1,0 +1,70 @@
+services:
+  libreddit:
+    image: libreddit/libreddit:latest
+    environment:
+      BLUR_NSFW: on
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.libreddit.entrypoints=web,websecure"
+      - "traefik.http.routers.libreddit.rule=Host(`libreddit.teknologiumum.com`)"
+      - "traefik.http.routers.libreddit.priority=1"
+      - "traefik.http.routers.libreddit.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.libreddit.middlewares=libreddit-header,libreddit-rate,libreddit-redirectscheme"
+      - "traefik.http.services.libreddit.loadbalancer.server.port=8080"
+      - "traefik.http.services.libreddit.loadbalancer.server.scheme=http"
+      - "traefik.http.services.libreddit.loadbalancer.healthcheck.interval=120s"
+      - "traefik.http.services.libreddit.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.libreddit-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.libreddit-rate.ratelimit.burst=20"
+      - "traefik.http.middlewares.libreddit-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.libreddit-header.headers.accesscontrolallowmethods=GET,OPTIONS"
+      - "traefik.http.middlewares.libreddit-header.headers.accesscontrolalloworiginlist=https://teknologiumum.com"
+      - "traefik.http.middlewares.libreddit-header.headers.accesscontrolmaxage=604800"
+      - "traefik.http.middlewares.libreddit-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.libreddit-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.libreddit-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.libreddit-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.libreddit-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.libreddit-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.libreddit-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.libreddit-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.libreddit-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.libreddit-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    storage_opt:
+      size: '1G'
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: 3
+    healthcheck:
+      test: wget -q -S -O - http://localhost:8080
+      interval: 60s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 750MB
+          cpus: '1'
+        reservations:
+          memory: 25MB
+          cpus: '0.10'
+    networks:
+      - libreddit
+
+networks:
+  libreddit:
+    external: true
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.16.21.32/28

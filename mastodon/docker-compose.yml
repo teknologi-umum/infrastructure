@@ -1,0 +1,380 @@
+x-common:
+  &common
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  DB_HOST: db
+  DB_USER: ${DATABASE_USER}
+  DB_PASS: ${DATABASE_PASSWORD}
+  DB_NAME: ${DATABASE_NAME}
+  DB_PORT: 5432
+  DB_SSLMODE: disable
+  ES_ENABLED: true
+  ES_HOST: elasticsearch
+  ES_PORT: 9200
+  SECRET_KEY_BASE: ${SECRET_KEY}
+  OTP_SECRET: ${OTP_KEY}
+  SMTP_SERVER: ${SMTP_SERVER}
+  SMTP_PORT: ${SMTP_PORT}
+  SMTP_LOGIN: ${SMTP_LOGIN}
+  SMTP_PASSWORD: ${SMTP_PASSWORD}
+  SMTP_FROM_ADDRESS: ${SMTP_SENDER}
+  SMTP_ENABLE_STARTTLS_AUTO: true
+  SMTP_DOMAIN: ${SMTP_DOMAIN}
+  S3_ENABLED: true
+  S3_REGION: ${S3_REGION}
+  S3_PROTOCOL: https
+  S3_HOSTNAME: ${S3_HOSTNAME}
+  S3_ENDPOINT: https://${S3_HOSTNAME}
+  S3_BUCKET: ${S3_BUCKET}
+  AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+  AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+  IP_RETENTION_PERIOD: 31556952
+  SESSION_RETENTION_PERIOD: 31556952
+  LOCAL_DOMAIN: mastodon.teknologiumum.com
+  STREAMING_API_BASE_URL: wss://streaming.mastodon.teknologiumum.com
+  STREAMING_CLUSTER_NUM: 2
+
+services:
+  db:
+    image: postgres:14.6-bullseye
+    shm_size: 256mb
+    networks:
+      - mastodon_internal
+    healthcheck:
+      test: pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 2GB
+          cpus: '1'
+        reservations:
+          memory: 100MB
+          cpus: '0.10'
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_DB: ${DATABASE_NAME}
+
+  backup:
+    image: eeshugerman/postgres-backup-s3:14
+    environment:
+      SCHEDULE: '@weekly'     # optional
+      BACKUP_KEEP_DAYS: 14     # optional
+      S3_REGION: sin1
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BACKUP_BUCKET}
+      S3_PREFIX: backup
+      POSTGRES_HOST: db
+      POSTGRES_DATABASE: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+    networks:
+      - mastodon_internal
+
+  redis:
+    image: redis:7.0-bullseye
+    networks:
+      - mastodon_internal
+    healthcheck:
+      test: "redis-cli ping"
+      interval: 15s
+      timeout: 10s
+      retries: 10
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 1GB
+          cpus: '1'
+        reservations:
+          memory: 100MB
+          cpus: '0.10'
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+    volumes:
+      - redis-data:/data
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.7
+    environment:
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m -Des.enforce.bootstrap.checks=true"
+      - "xpack.license.self_generated.type=basic"
+      - "xpack.security.enabled=false"
+      - "xpack.watcher.enabled=false"
+      - "xpack.graph.enabled=false"
+      - "xpack.ml.enabled=false"
+      - "bootstrap.memory_lock=true"
+      - "cluster.name=es-mastodon"
+      - "discovery.type=single-node"
+      - "thread_pool.write.queue_size=1000"
+    networks:
+      - mastodon
+      - mastodon_internal
+    healthcheck:
+      test: "curl --silent --fail localhost:9200/_cluster/health || exit 1"
+      interval: 30s
+      timeout: 20s
+      retries: 10
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 1.25GB
+          cpus: '1'
+        reservations:
+          memory: 250MB
+          cpus: '0.10'
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+
+  web:
+    image: tootsuite/mastodon:v4.0.2
+    environment:
+      <<: [ *common ]
+    command: bash -c "rm -f /mastodon/tmp/pids/server.pid; bundle exec rails s -p 3000"
+    networks:
+      - mastodon
+      - mastodon_internal
+    healthcheck:
+      test: "wget -q --spider --proxy=off localhost:3000/health || exit 1"
+      interval: 45s
+      timeout: 35s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 2GB
+          cpus: '2'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+    volumes:
+      - public-system:/mastodon/public/system
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=mastodon"
+      - "traefik.http.routers.mastodon.entrypoints=web,websecure"
+      - "traefik.http.routers.mastodon.rule=Host(`mastodon.teknologiumum.com`)"
+      - "traefik.http.routers.mastodon.priority=1"
+      - "traefik.http.routers.mastodon.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.mastodon.middlewares=mastodon-header,mastodon-rate,mastodon-redirectscheme,mastodon-compress"
+      - "traefik.http.services.mastodon.loadbalancer.server.port=3000"
+      - "traefik.http.services.mastodon.loadbalancer.server.scheme=http"
+      - "traefik.http.services.mastodon.loadbalancer.healthcheck.timeout=240s"
+      - "traefik.http.services.mastodon.loadbalancer.healthcheck.interval=300s"
+      - "traefik.http.services.mastodon.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.middlewares.mastodon-compress.compress=true"
+      - "traefik.http.middlewares.mastodon-compress.compress.minresponsebodybytes=128"
+      - "traefik.http.middlewares.mastodon-rate.ratelimit.average=350"
+      - "traefik.http.middlewares.mastodon-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.mastodon-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.mastodon-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.mastodon-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.mastodon-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.mastodon-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.mastodon-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.mastodon-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.mastodon-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.mastodon-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.mastodon-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.mastodon-redirectscheme.redirectscheme.permanent=true"
+
+  streaming:
+    image: tootsuite/mastodon:v4.0.2
+    environment:
+      <<: [ *common ]
+      STREAMING_CLUSTER_NUM: 1
+    command: node ./streaming
+    networks:
+      - mastodon
+      - mastodon_internal
+    healthcheck:
+      test: "wget -q --spider --proxy=off localhost:4000/api/v1/streaming/health || exit 1"
+      interval: 60s
+      timeout: 50s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 1GB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=mastodon"
+      - "traefik.http.routers.mastodon_streaming.entrypoints=web,websecure"
+      - "traefik.http.routers.mastodon_streaming.rule=Host(`mastodon.teknologiumum.com`) && PathPrefix(`/api/v1/streaming`)"
+      - "traefik.http.routers.mastodon_streaming.priority=2"
+      - "traefik.http.routers.mastodon_streaming.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.mastodon_streaming.middlewares=mastodon_streaming-header,mastodon_streaming-rate,mastodon_streaming-redirectscheme,mastodon_streaming-compress"
+      - "traefik.http.services.mastodon_streaming.loadbalancer.server.port=4000"
+      - "traefik.http.services.mastodon_streaming.loadbalancer.server.scheme=http"
+      - "traefik.http.services.mastodon_streaming.loadbalancer.healthcheck.interval=300s"
+      - "traefik.http.services.mastodon_streaming.loadbalancer.healthcheck.timeout=240s"
+      - "traefik.http.services.mastodon_streaming.loadbalancer.healthcheck.path=/api/v1/streaming/health"
+      - "traefik.http.middlewares.mastodon_streaming-compress.compress=true"
+      - "traefik.http.middlewares.mastodon_streaming-compress.compress.minresponsebodybytes=128"
+      - "traefik.http.middlewares.mastodon_streaming-rate.ratelimit.average=350"
+      - "traefik.http.middlewares.mastodon_streaming-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.mastodon_streaming-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.mastodon_streaming-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.mastodon_streaming-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.mastodon_streaming-redirectscheme.redirectscheme.permanent=true"
+
+  sidekiq:
+    image: tootsuite/mastodon:v4.0.2
+    environment:
+      <<: [ *common ]
+    command: bundle exec sidekiq
+    networks:
+      - mastodon
+      - mastodon_internal
+    volumes:
+      - public-system:/mastodon/public/system
+    healthcheck:
+      test: "ps aux | grep '[s]idekiq\ 6' || false"
+      interval: 30s
+      timeout: 20s
+      retries: 10
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 1GB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    logging:
+      driver: json-file
+      options:
+        max-size: 20M
+        max-file: 3
+
+networks:
+  mastodon:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 172.16.21.0/28
+  mastodon_internal:
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.16.21.16/28
+
+volumes:
+  elasticsearch-data:
+  redis-data:
+  postgres-data:
+  public-system:

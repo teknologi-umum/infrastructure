@@ -1,0 +1,25 @@
+services:
+  verdaccio:
+    image: verdaccio/verdaccio:5
+    ports:
+      - 127.0.0.1:4873:4873
+    volumes:
+      - verdaccio-storage:/verdaccio/storage
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10M
+        max-file: 3
+
+volumes:
+  verdaccio-storage:
+    external: true

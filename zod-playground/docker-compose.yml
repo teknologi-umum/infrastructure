@@ -1,0 +1,62 @@
+services:
+  zod_playground:
+    image: ghcr.io/teknologi-umum/zod-playground:edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zod_playground.entrypoints=web,websecure"
+      - "traefik.http.routers.zod_playground.rule=Host(`zod.teknologiumum.com`)"
+      - "traefik.http.routers.zod_playground.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.zod_playground.middlewares=zp-header,zp-rate,zp-redirectscheme"
+      - "traefik.http.services.zod_playground.loadbalancer.server.port=80"
+      - "traefik.http.services.zod_playground.loadbalancer.server.scheme=http"
+      - "traefik.http.services.zod_playground.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.zod_playground.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.zp-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.zp-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.zp-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.zp-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.zp-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.zp-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.zp-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.zp-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.zp-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.zp-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.zp-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.zp-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.zp-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    healthcheck:
+      test: curl -f http://localhost:80/ || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 500MB
+          cpus: '1'
+        reservations:
+          memory: 10MB
+          cpus: '0.10'
+    networks:
+      - zod_playground
+    logging:
+      driver: json-file
+      options:
+        max-size: 10M
+        max-file: 3
+
+networks:
+  zod_playground:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 172.16.21.128/28

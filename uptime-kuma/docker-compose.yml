@@ -1,0 +1,44 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    ports:
+      - 127.0.0.1:43241:3001
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime-kuma.entrypoints=web,websecure"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`status.teknologiumum.com`)"
+      - "traefik.http.routers.uptime-kuma.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.uptime-kuma.middlewares=uptime-kuma-header,uptime-kuma-rate,uptime-kuma-redirectscheme"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
+      - "traefik.http.services.uptime-kuma.loadbalancer.server.scheme=http"
+      - "traefik.http.services.uptime-kuma.loadbalancer.healthcheck.interval=120s"
+      - "traefik.http.services.uptime-kuma.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.uptime-kuma-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.uptime-kuma-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.uptime-kuma-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.uptime-kuma-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.uptime-kuma-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.uptime-kuma-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    volumes:
+      - uptime-data:/app/data
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10M
+        max-file: 3
+
+volumes:
+  uptime-data:

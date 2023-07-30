@@ -1,0 +1,45 @@
+services:
+  bot:
+    image: ghcr.io/teknologi-umum/bot:edge
+    environment:
+      NODE_ENV: production
+      MONGO_URL:
+      BOT_TOKEN:
+      FINNHUB_KEY:
+      SENTRY_DSN:
+      HOME_GROUP_ID:
+      LOGTAIL_TOKEN:
+      REDIS_URL:
+      PESTO_TOKEN:
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 300MB
+          cpus: '0.75'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    networks:
+      - bot
+    logging:
+      driver: json-file
+      options:
+        max-size: 50M
+        max-file: 3
+
+networks:
+  bot:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 172.16.21.112/28
