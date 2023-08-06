@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15.0-bullseye
+    image: postgres:15.3-bookworm
     environment:
       POSTGRES_PASSWORD:
       POSTGRES_USER:
@@ -28,13 +28,15 @@ services:
           cpus: '0.10'
     networks:
       - internal
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
     logging:
       driver: json-file
       options:
-        max-size: 100M
+        max-size: 10M
         max-file: 3
   application:
-    build: .
+    image: ghcr.io/teknologi-umum/captcha:edge
     environment:
       ENVIRONMENT: production
       BOT_TOKEN:
@@ -69,6 +71,7 @@ services:
       - "traefik.http.middlewares.captcha_bot-header.headers.customResponseHeaders.server=Teknologi Umum"
       - "traefik.http.middlewares.captcha_bot-redirectscheme.redirectscheme.scheme=https"
       - "traefik.http.middlewares.captcha_bot-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
     healthcheck:
       test: curl -f http://application:8080 || exit 1
@@ -92,11 +95,17 @@ services:
     networks:
       - captcha
       - internal
+    depends_on:
+      postgres:
+        condition: service_healthy
     logging:
       driver: json-file
       options:
         max-size: 100M
         max-file: 3
+
+volumes:
+  postgres-data:
 
 networks:
   captcha:

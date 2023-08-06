@@ -68,9 +68,8 @@ services:
     cap_drop:
       - ALL
     networks:
-      nitter:
-        ipv4_address: 10.1.7.20
-      nitter_internal:
+      - nitter
+      - nitter_internal
     depends_on:
       nitter-redis:
         condition: service_healthy
@@ -112,7 +111,7 @@ services:
     cap_drop:
       - ALL
     networks:
-      nitter_internal:
+      - nitter_internal
 
 volumes:
   nitter-redis:

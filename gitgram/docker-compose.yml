@@ -5,7 +5,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       WEBHOOK_SECRET: ${TEKNUM_WEBHOOK_SECRET}
-      BOT_TOKEN: ${TEKNUM_BOT_SECRET}
+      BOT_TOKEN: ${TEKNUM_BOT_TOKEN}
       HOME_GROUP: ${TEKNUM_HOME_GROUP}
       IGNORE_PRIVATE_REPOSITORY: true
     labels:

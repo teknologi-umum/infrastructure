@@ -52,7 +52,6 @@ services:
       restart_policy:
         condition: unless-stopped
         delay: 30s
-        max_attempts: 10
         window: 120s
       resources:
         limits:
@@ -117,7 +116,6 @@ services:
       restart_policy:
         condition: unless-stopped
         delay: 30s
-        max_attempts: 10
         window: 120s
       resources:
         limits:

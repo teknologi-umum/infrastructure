@@ -36,7 +36,7 @@ x-common:
 
 services:
   db:
-    image: postgres:14.6-bullseye
+    image: postgres:14.6-bookworm
     shm_size: 256mb
     networks:
       - mastodon_internal
@@ -98,7 +98,7 @@ services:
       - mastodon_internal
 
   redis:
-    image: redis:7.0-bullseye
+    image: redis:7.0-bookworm
     networks:
       - mastodon_internal
     healthcheck:
@@ -143,7 +143,6 @@ services:
       - "discovery.type=single-node"
       - "thread_pool.write.queue_size=1000"
     networks:
-      - mastodon
       - mastodon_internal
     healthcheck:
       test: "curl --silent --fail localhost:9200/_cluster/health || exit 1"
@@ -325,7 +324,6 @@ services:
       <<: [ *common ]
     command: bundle exec sidekiq
     networks:
-      - mastodon
       - mastodon_internal
     volumes:
       - public-system:/mastodon/public/system

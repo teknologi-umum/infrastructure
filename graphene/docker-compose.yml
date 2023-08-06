@@ -34,6 +34,7 @@ services:
       - "traefik.http.middlewares.graphene-header.headers.customResponseHeaders.server=Teknologi Umum"
       - "traefik.http.middlewares.graphene-redirectscheme.redirectscheme.scheme=https"
       - "traefik.http.middlewares.graphene-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
     healthcheck:
       test: curl -f http://localhost:3000/ || exit 1
