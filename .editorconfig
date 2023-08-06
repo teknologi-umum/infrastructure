@@ -135,6 +135,7 @@ ij_python_wrap_long_lines = false
 
 [{*.yaml,*.yml}]
 indent_size = 2
+max_line_length = 256
 ij_yaml_align_values_properties = do_not_align
 ij_yaml_autoinsert_sequence_marker = true
 ij_yaml_block_mapping_on_new_line = false
@@ -145,3 +146,6 @@ ij_yaml_sequence_on_new_line = false
 ij_yaml_space_before_colon = false
 ij_yaml_spaces_within_braces = true
 ij_yaml_spaces_within_brackets = true
+
+[Caddyfile]
+max_line_length = 400

@@ -24,9 +24,10 @@ jobs:
         
       - name: MegaLinter
         id: ml
-        uses: oxsecurity/megalinter@v7
+        uses: oxsecurity/megalinter/flavors/documentation@v7
         env:
           # All available variables are described in documentation
           # https://megalinter.io/configuration/
           VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
           ENABLE: EDITORCONFIG
+          FILTER_REGEX_EXCLUDE: (LICENSE|CODE_OF_CONDUCT\.md)
