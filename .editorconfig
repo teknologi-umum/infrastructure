@@ -149,3 +149,4 @@ ij_yaml_spaces_within_brackets = true
 
 [Caddyfile]
 max_line_length = 400
+indent_size = 2
