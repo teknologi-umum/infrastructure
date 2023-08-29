@@ -81,6 +81,7 @@ services:
       - calcom_external
       - nitter
       - focalboard_external
+      - conference
 
 networks:
   pesto:
@@ -117,4 +118,6 @@ networks:
     driver: bridge
     external: true
   nitter:
+    external: true
+  conference:
     external: true

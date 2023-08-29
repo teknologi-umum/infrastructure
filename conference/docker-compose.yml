@@ -1,0 +1,207 @@
+services:
+  postgres:
+    image: postgres:15.3-bookworm
+    environment:
+      POSTGRES_PASSWORD:
+      POSTGRES_USER:
+      POSTGRES_DB:
+      TZ: UTC
+    healthcheck:
+      test: pg_isready
+      interval: 30s
+      timeout: 20s
+      retries: 10
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 5
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 2GB
+          cpus: '2'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    networks:
+      - internal
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+
+  frontend:
+    image: ghcr.io/teknologi-umum/conf-frontend:latest
+    environment:
+      NODE_ENV: production
+      SENTRY_DSN:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=conference"
+      - "traefik.http.routers.conf-frontend.entrypoints=web,websecure"
+      - "traefik.http.routers.conf-frontend.rule=Host(`conf.teknologiumum.com`)"
+      - "traefik.http.routers.conf-frontend.priority=1"
+      - "traefik.http.routers.conf-frontend.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.conf-frontend.middlewares=conf-frontend-header,conf-frontend-rate,conf-frontend-redirectscheme"
+      - "traefik.http.services.conf-frontend.loadbalancer.server.port=3000"
+      - "traefik.http.services.conf-frontend.loadbalancer.server.scheme=http"
+      - "traefik.http.services.conf-frontend.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.conf-frontend.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.conf-frontend-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.conf-frontend-rate.ratelimit.burst=20"
+      - "traefik.http.middlewares.conf-frontend-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.conf-frontend-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.conf-frontend-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.conf-frontend-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.conf-frontend-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.conf-frontend-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.conf-frontend-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.conf-frontend-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.conf-frontend-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.conf-frontend-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.conf-frontend-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 300MB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - conference
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+
+  backend-migrate:
+    image: ghcr.io/teknologi-umum/conf-backend:latest
+    entrypoint: /app/conf-backend migrate up
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: "${POSTGRES_USER:-}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:-}"
+      DB_NAME: "${POSTGRES_DB:-}"
+      SENTRY_DSN:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    deploy:
+      mode: replicated
+      replicas: 1
+      resources:
+        limits:
+          memory: 500MB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    networks:
+      - internal
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+
+  backend:
+    image: ghcr.io/teknologi-umum/conf-backend:latest
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: "${POSTGRES_USER:-}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD:-}"
+      DB_NAME: "${POSTGRES_DB:-}"
+      PORT: 8080
+      SENTRY_DSN:
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=conference"
+      - "traefik.http.routers.conf-backend.entrypoints=web,websecure"
+      - "traefik.http.routers.conf-backend.rule=Host(`conf.teknologiumum.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.conf-backend.priority=1"
+      - "traefik.http.routers.conf-backend.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.conf-backend.middlewares=conf-backend-header,conf-backend-rate,conf-backend-redirectscheme"
+      - "traefik.http.services.conf-backend.loadbalancer.server.port=8080"
+      - "traefik.http.services.conf-backend.loadbalancer.server.scheme=http"
+      - "traefik.http.services.conf-backend.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.conf-backend.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.conf-backend-stripprefix.stripprefix.prefixes=/api"
+      - "traefik.http.middlewares.conf-backend-rate.ratelimit.average=50"
+      - "traefik.http.middlewares.conf-backend-rate.ratelimit.burst=15"
+      - "traefik.http.middlewares.conf-backend-rate.ratelimit.period=5s"
+      - "traefik.http.middlewares.conf-backend-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.conf-backend-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.conf-backend-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.conf-backend-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.conf-backend-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.conf-backend-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.conf-backend-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.conf-backend-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.conf-backend-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.conf-backend-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 500MB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    networks:
+      - internal
+      - conference
+    depends_on:
+      backend-migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+
+volumes:
+  postgres-data:
+
+networks:
+  conference:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 172.16.21.144/28
+  internal:
+    driver: bridge
+    external: false
+    ipam:
+      config:
+        - subnet: 10.1.7.32/28
