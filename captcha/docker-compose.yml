@@ -42,11 +42,20 @@ services:
       BOT_TOKEN:
       SENTRY_DSN:
       DATABASE_URL:
+      POSTGRES_URL:
       MONGO_URL:
       TZ: UTC
       TEKNUM_ID:
+      HOME_GROUP_ID:
       ADMIN_ID:
-      PORT: 8080
+      ADMIN_IDS:
+      FEATURE_FLAG_DUKUN: true
+      FEATURE_FLAG_BADWORDS_INSERTION: true
+      FEATURE_FLAG_UNDER_ATTACK: true
+      FEATURE_FLAG_ANALYTICS: true
+      FEATURE_FLAG_REMINDER: true
+      HTTP_PORT: 8080
+      UNDER_ATTACK__DATASTORE_PROVIDER: postgres
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=captcha"

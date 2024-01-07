@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v2.10.3
+    image: traefik:v2.10.5
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -77,11 +77,8 @@ services:
       - tgif
       - zod_playground
       - projects
-      - ohmyform_external
-      - calcom_external
-      - nitter
-      - focalboard_external
       - conference
+      - gold
 
 networks:
   pesto:
@@ -120,4 +117,6 @@ networks:
   nitter:
     external: true
   conference:
+    external: true
+  gold:
     external: true

@@ -13,7 +13,7 @@ services:
       - "traefik.http.services.libreddit.loadbalancer.server.port=8080"
       - "traefik.http.services.libreddit.loadbalancer.server.scheme=http"
       - "traefik.http.services.libreddit.loadbalancer.healthcheck.interval=120s"
-      - "traefik.http.services.libreddit.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.libreddit.loadbalancer.healthcheck.path=/settings"
       - "traefik.http.middlewares.libreddit-rate.ratelimit.average=100"
       - "traefik.http.middlewares.libreddit-rate.ratelimit.burst=20"
       - "traefik.http.middlewares.libreddit-rate.ratelimit.period=1s"
