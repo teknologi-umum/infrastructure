@@ -1,0 +1,32 @@
+services:
+  bagetter:
+    image: bagetter/bagetter:latest
+    environment:
+      Mirror__Enabled: true
+      Mirror__PackageSource: "https://api.nuget.org/v3/index.json"
+      ApiKey:
+      PackageDeletionBehavior: "HardDelete"
+    ports:
+      - 127.0.0.1:5000:5000
+    network_mode: host
+    command: --urls http://127.0.0.1:5000
+    volumes:
+      - bagetter-storage:/data
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+        max-file: 3
+
+volumes:
+  bagetter-storage:
+    external: true
