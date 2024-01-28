@@ -1,0 +1,88 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 250MB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    healthcheck:
+      test: "wget -O - -T 5 -S http://localhost:9090/api/v1/status/runtimeinfo"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:latest
+    user: '472'
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 30s
+        max_attempts: 10
+        window: 120s
+      resources:
+        limits:
+          memory: 250MB
+          cpus: '1'
+        reservations:
+          memory: 50MB
+          cpus: '0.10'
+    environment:
+      GF_INSTALL_PLUGINS: 'grafana-clock-panel,grafana-simple-json-datasource'
+      GF_SECURITY_ADMIN_USER:
+      GF_SECURITY_ADMIN_PASSWORD:
+      GF_USERS_ALLOW_SIGN_UP: false
+    healthcheck:
+      test: "wget -O - -T 5 -S http://localhost:3000/api/health"
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.entrypoints=web,websecure"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.teknologiumum.com`)"
+      - "traefik.http.routers.grafana.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.grafana.middlewares=grafana-rate,grafana-redirectscheme"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.services.grafana.loadbalancer.server.scheme=http"
+      - "traefik.http.services.grafana.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.grafana.loadbalancer.healthcheck.path=/api/health"
+      - "traefik.http.middlewares.grafana-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.grafana-rate.ratelimit.burst=20"
+      - "traefik.http.middlewares.grafana-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.grafana-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.grafana-redirectscheme.redirectscheme.permanent=true"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - monitoring
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  monitoring:
+    external: true
