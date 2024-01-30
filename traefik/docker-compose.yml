@@ -83,6 +83,7 @@ services:
       - conference
       - gold
       - monitoring
+      - pph21
 
 networks:
   pesto:
@@ -125,4 +126,6 @@ networks:
   gold:
     external: true
   monitoring:
+    external: true
+  pph21:
     external: true
