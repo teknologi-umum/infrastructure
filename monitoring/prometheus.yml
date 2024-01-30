@@ -1,0 +1,35 @@
+global:
+  # How frequently to scrape targets by default.
+  scrape_interval: 30s
+
+  # How long until a scrape request times out.
+  scrape_timeout: 15s
+
+  # How frequently to evaluate rules.
+  evaluation_interval: 10m
+
+# A list of scrape configurations.
+scrape_configs:
+  - job_name: Traefik
+    static_configs:
+      - labels:
+          application: Traefik
+        targets:
+          - traefik:8082
+
+  - job_name: Uptime Kuma
+    static_configs:
+      - labels:
+          application: Uptime Kuma
+        targets:
+          - 192.168.193.71:43241
+    basic_auth:
+      username: <your user>
+      password: <your password>
+
+  - job_name: Captcha Postgres
+    static_configs:
+      - labels:
+          application: PostgreSQL
+        targets:
+          - captcha.postgres-exporter:9187

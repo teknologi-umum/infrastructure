@@ -19,6 +19,9 @@ services:
       - "--entrypoints.websecure.http3"
       - "--global.sendanonymoususage=true"
       - "--log.level=INFO"
+      - "--metrics.prometheus=true"
+      - "--entryPoints.metrics.address=:8082"
+      - "--metrics.prometheus.entryPoint=metrics"
     environment:
       - TZ=UTC
     ports:
@@ -79,6 +82,7 @@ services:
       - projects
       - conference
       - gold
+      - monitoring
 
 networks:
   pesto:
@@ -119,4 +123,6 @@ networks:
   conference:
     external: true
   gold:
+    external: true
+  monitoring:
     external: true
