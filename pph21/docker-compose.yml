@@ -1,0 +1,63 @@
+services:
+  pph21:
+    image: ghcr.io/teknologi-umum/pph21:edge
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=pph21"
+      - "traefik.http.routers.pph21.entrypoints=web,websecure"
+      - "traefik.http.routers.pph21.rule=Host(`pph21.teknologiumum.com`)"
+      - "traefik.http.routers.pph21.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.pph21.middlewares=pph21-header,pph21-rate,pph21-redirectscheme"
+      - "traefik.http.services.pph21.loadbalancer.server.port=3000"
+      - "traefik.http.services.pph21.loadbalancer.server.scheme=http"
+      - "traefik.http.services.pph21.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.pph21.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.pph21-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.pph21-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.pph21-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.pph21-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.pph21-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.pph21-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.pph21-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.pph21-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.pph21-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.pph21-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.pph21-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.pph21-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.pph21-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    healthcheck:
+      test: curl -f http://localhost:3000/ || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 500MB
+          cpus: '1'
+        reservations:
+          memory: 10M
+          cpus: '0.05'
+    networks:
+      - pph21
+    logging:
+      driver: json-file
+      options:
+        max-size: 10M
+        max-file: 1
+
+networks:
+  pph21:
+    driver: bridge
+    external: true
+    ipam:
+      config:
+        - subnet: 172.16.20.16/28
