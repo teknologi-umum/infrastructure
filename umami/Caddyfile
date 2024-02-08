@@ -1,0 +1,17 @@
+analytics.teknologiumum.com {
+  reverse_proxy 127.0.0.1:23120
+
+  header {
+    server "Teknologi Umum"
+    ?Permissions-Policy interest-cohort=()
+    ?strict-transport-security "max-age=604800; includeSubDomains"
+    ?x-content-type-options nosniff
+    ?x-frame-options DENY
+    ?referrer-policy no-referrer-when-downgrade
+    ?content-security-policy "default-src 'none'; font-src 'self'; script-src 'self' blob:; manifest-src 'self'; media-src 'self' data: blob: about:; style-src 'self' 'unsafe-inline'; base-uri 'none'; img-src 'self' data:; form-action 'self'; frame-ancestors 'none'; connect-src 'self'; worker-src blob:;"
+    ?vary Origin
+    ?x-xss-protection "1; mode=block"
+  }
+
+  tls opensource@teknologiumum.com
+}
