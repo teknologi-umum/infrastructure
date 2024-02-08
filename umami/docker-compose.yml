@@ -1,0 +1,60 @@
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    ports:
+      - "23120:3000"
+    environment:
+      DATABASE_URL:
+      DATABASE_TYPE: postgresql
+      APP_SECRET:
+      DISABLE_BOT_CHECK: 1
+      DISABLE_UPDATES: 1
+      DISABLE_TELEMETRY: 1
+      REMOVE_TRAILING_SLASH: 1
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+        max-file: 3
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:
+      POSTGRES_USER:
+      POSTGRES_PASSWORD:
+    volumes:
+      - umami-db-data:/var/lib/postgresql/data
+    deploy:
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+    logging:
+      driver: local
+      options:
+        max-size: 10M
+        max-file: 3
+
+volumes:
+  umami-db-data:
+    external: true
