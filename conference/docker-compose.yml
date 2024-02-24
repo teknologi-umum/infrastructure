@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:15.3-bookworm
+    image: postgres:16-bookworm
     environment:
       POSTGRES_PASSWORD:
       POSTGRES_USER:
@@ -27,13 +27,9 @@ services:
           memory: 50MB
           cpus: '0.10'
     networks:
-      - internal
+      - conference-internal
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    logging:
-      driver: local
-      options:
-        max-size: 10M
 
   frontend:
     image: ghcr.io/teknologi-umum/conf-frontend:latest
@@ -42,9 +38,9 @@ services:
       SENTRY_DSN:
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=conference"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.conf-frontend.entrypoints=web,websecure"
-      - "traefik.http.routers.conf-frontend.rule=Host(`conf.teknologiumum.com`)"
+      - "traefik.http.routers.conf-frontend.rule=Host(`conference.teknologiumum.com`)"
       - "traefik.http.routers.conf-frontend.priority=1"
       - "traefik.http.routers.conf-frontend.tls.certresolver=tlsresolver"
       - "traefik.http.routers.conf-frontend.middlewares=conf-frontend-header,conf-frontend-rate,conf-frontend-redirectscheme"
@@ -85,11 +81,7 @@ services:
       backend:
         condition: service_started
     networks:
-      - conference
-    logging:
-      driver: local
-      options:
-        max-size: 10M
+      - public-web
 
   backend-migrate:
     image: ghcr.io/teknologi-umum/conf-backend:latest
@@ -118,11 +110,7 @@ services:
           memory: 50MB
           cpus: '0.10'
     networks:
-      - internal
-    logging:
-      driver: local
-      options:
-        max-size: 10M
+      - conference-internal
 
   backend:
     image: ghcr.io/teknologi-umum/conf-backend:latest
@@ -136,16 +124,16 @@ services:
       SENTRY_DSN:
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=conference"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.conf-backend.entrypoints=web,websecure"
-      - "traefik.http.routers.conf-backend.rule=Host(`conf.teknologiumum.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.conf-backend.rule=Host(`conference.teknologiumum.com`) && PathPrefix(`/api`)"
       - "traefik.http.routers.conf-backend.priority=1"
       - "traefik.http.routers.conf-backend.tls.certresolver=tlsresolver"
       - "traefik.http.routers.conf-backend.middlewares=conf-backend-header,conf-backend-rate,conf-backend-redirectscheme"
       - "traefik.http.services.conf-backend.loadbalancer.server.port=8080"
       - "traefik.http.services.conf-backend.loadbalancer.server.scheme=http"
       - "traefik.http.services.conf-backend.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.conf-backend.loadbalancer.healthcheck.path=/"
+      - "traefik.http.services.conf-backend.loadbalancer.healthcheck.path=/ping"
       - "traefik.http.middlewares.conf-backend-stripprefix.stripprefix.prefixes=/api"
       - "traefik.http.middlewares.conf-backend-rate.ratelimit.average=50"
       - "traefik.http.middlewares.conf-backend-rate.ratelimit.burst=15"
@@ -177,31 +165,20 @@ services:
           memory: 50MB
           cpus: '0.10'
     networks:
-      - internal
-      - conference
+      - public-web
+      - conference-internal
     depends_on:
       backend-migrate:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
-    logging:
-      driver: local
-      options:
-        max-size: 10M
 
 volumes:
   postgres-data:
 
 networks:
-  conference:
-    driver: bridge
-    external: true
-    ipam:
-      config:
-        - subnet: 172.16.21.144/28
-  internal:
+  conference-internal:
     driver: bridge
     external: false
-    ipam:
-      config:
-        - subnet: 10.1.7.32/28
+  public-web:
+    external: true

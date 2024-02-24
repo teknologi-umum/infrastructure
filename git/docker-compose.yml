@@ -1,0 +1,60 @@
+services:
+  server:
+    image: codeberg.org/forgejo/forgejo:1.21
+    container_name: forgejo
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.forgejo.entrypoints=web,websecure"
+      - "traefik.http.routers.forgejo.rule=Host(`git.teknologiumum.com`)"
+      - "traefik.http.routers.forgejo.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.forgejo.middlewares=forgejo-header,forgejo-rate,forgejo-redirectscheme"
+      - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+      - "traefik.http.services.forgejo.loadbalancer.server.scheme=http"
+      - "traefik.http.services.forgejo.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.forgejo.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.forgejo-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.forgejo-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.forgejo-rate.ratelimit.period=5s"
+      - "traefik.http.middlewares.forgejo-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.forgejo-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.forgejo-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.forgejo-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.forgejo-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.forgejo-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.forgejo-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.forgejo-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.forgejo-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.forgejo-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 500MB
+          cpus: '1'
+        reservations:
+          memory: 10M
+          cpus: '0.05'
+    networks:
+      - public-web
+    volumes:
+      - ./app.ini:/data/conf/app.ini
+      - forgejo-data:/data
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+
+volumes:
+  forgejo-data:
+
+networks:
+  public-web:
+    external: true

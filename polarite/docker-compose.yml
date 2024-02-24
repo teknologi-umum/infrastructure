@@ -6,8 +6,10 @@ services:
       PORT: 3000
       TZ: UTC
       SENTRY_DSN: ${SENTRY_DSN}
+      DATABASE_DIRECTORY: /app/ data
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.polarite.entrypoints=web,websecure"
       - "traefik.http.routers.polarite.rule=Host(`polarite.teknologiumum.com`)"
       - "traefik.http.routers.polarite.tls.certresolver=tlsresolver"
@@ -53,19 +55,13 @@ services:
           memory: 100MB
           cpus: '0.10'
     networks:
-      - polarite
-    logging:
-      driver: json-file
-      options:
-        max-size: 100M
-        max-file: 3
+      - public-web
     volumes:
-      - ./data/:/app/data/
+      - polarite-data:/app/data
+
+volumes:
+  polarite-data:
 
 networks:
-  polarite:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 10.2.9.0/28

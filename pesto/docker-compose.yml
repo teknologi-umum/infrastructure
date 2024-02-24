@@ -3,7 +3,7 @@ x-defaults:
   ENVIRONMENT: production
 
 services:
-  landing:
+  pesto-landing:
     image: ghcr.io/teknologi-umum/pesto-landing:edge
     environment:
       <<: [ *defaults ]
@@ -11,41 +11,34 @@ services:
       SENTRY_DSN: ${LANDING_SENTRY_DSN}
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=pesto"
-      - "traefik.http.routers.landing.entrypoints=web,websecure"
-      - "traefik.http.routers.landing.rule=Host(`pesto.teknologiumum.com`)"
-      - "traefik.http.routers.landing.priority=1"
-      - "traefik.http.routers.landing.tls.certresolver=tlsresolver"
-      - "traefik.http.routers.landing.middlewares=landing-header,landing-rate,landing-redirectscheme"
-      - "traefik.http.services.landing.loadbalancer.server.port=3000"
-      - "traefik.http.services.landing.loadbalancer.server.scheme=http"
-      - "traefik.http.services.landing.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.landing.loadbalancer.healthcheck.path=/"
-      - "traefik.http.middlewares.landing-rate.ratelimit.average=100"
-      - "traefik.http.middlewares.landing-rate.ratelimit.burst=20"
-      - "traefik.http.middlewares.landing-rate.ratelimit.period=1s"
-      - "traefik.http.middlewares.landing-header.headers.accesscontrolallowmethods=GET,OPTIONS"
-      - "traefik.http.middlewares.landing-header.headers.accesscontrolalloworiginlist=https://teknologiumum.com"
-      - "traefik.http.middlewares.landing-header.headers.accesscontrolmaxage=604800"
-      - "traefik.http.middlewares.landing-header.headers.addvaryheader=true"
-      - "traefik.http.middlewares.landing-header.headers.frameDeny=true"
-      - "traefik.http.middlewares.landing-header.headers.browserxssfilter=true"
-      - "traefik.http.middlewares.landing-header.headers.stsSeconds=604800"
-      - "traefik.http.middlewares.landing-header.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.landing-header.headers.browserXssFilter=true"
-      - "traefik.http.middlewares.landing-header.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.landing-header.headers.customResponseHeaders.server=Teknologi Umum"
-      - "traefik.http.middlewares.landing-redirectscheme.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.landing-redirectscheme.redirectscheme.permanent=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.pesto_landing.entrypoints=web,websecure"
+      - "traefik.http.routers.pesto_landing.rule=Host(`pesto.teknologiumum.com`)"
+      - "traefik.http.routers.pesto_landing.priority=1"
+      - "traefik.http.routers.pesto_landing.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.pesto_landing.middlewares=pesto_landing-header,pesto_landing-rate,pesto_landing-redirectscheme"
+      - "traefik.http.services.pesto_landing.loadbalancer.server.port=3000"
+      - "traefik.http.services.pesto_landing.loadbalancer.server.scheme=http"
+      - "traefik.http.services.pesto_landing.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.pesto_landing.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.pesto_landing-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.pesto_landing-rate.ratelimit.burst=20"
+      - "traefik.http.middlewares.pesto_landing-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.pesto_landing-header.headers.accesscontrolallowmethods=GET,OPTIONS"
+      - "traefik.http.middlewares.pesto_landing-header.headers.accesscontrolalloworiginlist=https://teknologiumum.com"
+      - "traefik.http.middlewares.pesto_landing-header.headers.accesscontrolmaxage=604800"
+      - "traefik.http.middlewares.pesto_landing-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.pesto_landing-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.pesto_landing-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.pesto_landing-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.pesto_landing-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.pesto_landing-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.pesto_landing-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.pesto_landing-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.pesto_landing-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.pesto_landing-redirectscheme.redirectscheme.permanent=true"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
-    storage_opt:
-      size: '1G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
     healthcheck:
       test: "curl -f http://localhost:3000/ || exit 1"
       interval: 15s
@@ -66,10 +59,11 @@ services:
           memory: 25MB
           cpus: '0.10'
     networks:
-      - pesto
+      - public-web
 
   db:
-    build: ./redis
+    image: ghcr.io/teknologi-umum/pesto-redis:edge
+    container_name: db
     platform: linux/amd64
     healthcheck:
       test: "redis-cli ping | grep PONG"
@@ -91,10 +85,11 @@ services:
           memory: 100MB
           cpus: '0.25'
     networks:
-      - internal
+      - pesto-internal
     volumes:
       - ../redis:/data
-  auth:
+  
+  pesto-auth:
     image: ghcr.io/teknologi-umum/pesto-auth:edge
     environment:
       <<: [ *defaults ]
@@ -103,36 +98,29 @@ services:
       REDIS_URL: redis://@db:6379/
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=pesto"
-      - "traefik.http.routers.auth.entrypoints=web,websecure"
-      - "traefik.http.routers.auth.middlewares=auth-error,auth-header,auth-rate"
-      - "traefik.http.services.auth.loadbalancer.server.port=3000"
-      - "traefik.http.services.auth.loadbalancer.server.scheme=http"
-      - "traefik.http.services.auth.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.auth.loadbalancer.healthcheck.path=/healthz"
-      - "traefik.http.middlewares.auth-error.errors.status=500-599"
-      - "traefik.http.middlewares.auth-error.errors.service=landing@docker"
-      - "traefik.http.middlewares.auth-error.errors.query=/500"
-      - "traefik.http.middlewares.auth-rate.ratelimit.average=20"
-      - "traefik.http.middlewares.auth-rate.ratelimit.burst=5"
-      - "traefik.http.middlewares.auth-rate.ratelimit.period=1s"
-      - "traefik.http.middlewares.auth-header.headers.addvaryheader=true"
-      - "traefik.http.middlewares.auth-header.headers.frameDeny=true"
-      - "traefik.http.middlewares.auth-header.headers.browserxssfilter=true"
-      - "traefik.http.middlewares.auth-header.headers.stsSeconds=604800"
-      - "traefik.http.middlewares.auth-header.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.auth-header.headers.browserXssFilter=true"
-      - "traefik.http.middlewares.auth-header.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.auth-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.pesto_auth.entrypoints=web,websecure"
+      - "traefik.http.routers.pesto_auth.middlewares=pesto_auth-error,pesto_auth-header,pesto_auth-rate"
+      - "traefik.http.services.pesto_auth.loadbalancer.server.port=3000"
+      - "traefik.http.services.pesto_auth.loadbalancer.server.scheme=http"
+      - "traefik.http.services.pesto_auth.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.pesto_auth.loadbalancer.healthcheck.path=/healthz"
+      - "traefik.http.middlewares.pesto_auth-error.errors.status=500-599"
+      - "traefik.http.middlewares.pesto_auth-error.errors.service=pesto_landing@docker"
+      - "traefik.http.middlewares.pesto_auth-error.errors.query=/500"
+      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.average=20"
+      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.burst=5"
+      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.pesto_auth-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.pesto_auth-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.pesto_auth-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.pesto_auth-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.pesto_auth-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.pesto_auth-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.pesto_auth-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.pesto_auth-header.headers.customResponseHeaders.server=Teknologi Umum"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
-    storage_opt:
-      size: '1G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
     healthcheck:
       test: "curl -f http://localhost:3000/healthz || exit 1"
       interval: 15s
@@ -156,10 +144,10 @@ services:
       db:
         condition: service_healthy
     networks:
-      - pesto
-      - internal
+      - public-web
+      - pesto-internal
 
-  rce:
+  pesto-rce:
     image: ghcr.io/teknologi-umum/pesto-rce:edge
     environment:
       <<: [ *defaults ]
@@ -167,48 +155,41 @@ services:
       SENTRY_DSN: ${RCE_SENTRY_DSN}
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=pesto"
-      - "traefik.http.routers.rce.entrypoints=web,websecure"
-      - "traefik.http.routers.rce.rule=Host(`pesto.teknologiumum.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.rce.priority=3"
-      - "traefik.http.routers.rce.tls.certresolver=tlsresolver"
-      - "traefik.http.routers.rce.middlewares=rce-auth,rce-error,rce-header,rce-rate,rce-redirectscheme"
-      - "traefik.http.services.rce.loadbalancer.server.port=50051"
-      - "traefik.http.services.rce.loadbalancer.server.scheme=http"
-      - "traefik.http.services.rce.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.rce.loadbalancer.healthcheck.path=/healthz"
-      - "traefik.http.middlewares.rce-auth.forwardauth.address=http://auth:3000/"
-      - "traefik.http.middlewares.rce-auth.forwardauth.authRequestHeaders=Accept,X-Pesto-Token,Referer,Origin"
-      - "traefik.http.middlewares.rce-auth.forwardauth.authResponseHeaders=Sentry-Trace,Baggage"
-      - "traefik.http.middlewares.rce-auth.forwardauth.tls.insecureSkipVerify=true"
-      - "traefik.http.middlewares.rce-error.errors.status=500-599"
-      - "traefik.http.middlewares.rce-error.errors.service=landing@docker"
-      - "traefik.http.middlewares.rce-error.errors.query=/500"
-      - "traefik.http.middlewares.rce-rate.ratelimit.average=60"
-      - "traefik.http.middlewares.rce-rate.ratelimit.burst=5"
-      - "traefik.http.middlewares.rce-rate.ratelimit.period=1m"
-      - "traefik.http.middlewares.rce-header.headers.accesscontrolallowmethods=GET,OPTIONS,POST"
-      - "traefik.http.middlewares.rce-header.headers.accesscontrolalloworiginlist=*"
-      - "traefik.http.middlewares.rce-header.headers.accesscontrolmaxage=604800"
-      - "traefik.http.middlewares.rce-header.headers.addvaryheader=true"
-      - "traefik.http.middlewares.rce-header.headers.frameDeny=true"
-      - "traefik.http.middlewares.rce-header.headers.browserxssfilter=true"
-      - "traefik.http.middlewares.rce-header.headers.stsSeconds=604800"
-      - "traefik.http.middlewares.rce-header.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.rce-header.headers.browserXssFilter=true"
-      - "traefik.http.middlewares.rce-header.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.rce-header.headers.customResponseHeaders.server=Teknologi Umum"
-      - "traefik.http.middlewares.rce-redirectscheme.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.rce-redirectscheme.redirectscheme.permanent=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.pesto_rce.entrypoints=web,websecure"
+      - "traefik.http.routers.pesto_rce.rule=Host(`pesto.teknologiumum.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.pesto_rce.priority=3"
+      - "traefik.http.routers.pesto_rce.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.pesto_rce.middlewares=pesto_rce-auth,pesto_rce-error,pesto_rce-header,pesto_rce-rate,pesto_rce-redirectscheme"
+      - "traefik.http.services.pesto_rce.loadbalancer.server.port=50051"
+      - "traefik.http.services.pesto_rce.loadbalancer.server.scheme=http"
+      - "traefik.http.services.pesto_rce.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.pesto_rce.loadbalancer.healthcheck.path=/healthz"
+      - "traefik.http.middlewares.pesto_rce-auth.forwardauth.address=http://pesto-auth:3000/"
+      - "traefik.http.middlewares.pesto_rce-auth.forwardauth.authRequestHeaders=Accept,X-Pesto-Token,Referer,Origin"
+      - "traefik.http.middlewares.pesto_rce-auth.forwardauth.authResponseHeaders=Sentry-Trace,Baggage"
+      - "traefik.http.middlewares.pesto_rce-auth.forwardauth.tls.insecureSkipVerify=true"
+      - "traefik.http.middlewares.pesto_rce-error.errors.status=500-599"
+      - "traefik.http.middlewares.pesto_rce-error.errors.service=pesto_landing@docker"
+      - "traefik.http.middlewares.pesto_rce-error.errors.query=/500"
+      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.average=60"
+      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.burst=5"
+      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.period=1m"
+      - "traefik.http.middlewares.pesto_rce-header.headers.accesscontrolallowmethods=GET,OPTIONS,POST"
+      - "traefik.http.middlewares.pesto_rce-header.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.pesto_rce-header.headers.accesscontrolmaxage=604800"
+      - "traefik.http.middlewares.pesto_rce-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.pesto_rce-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.pesto_rce-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.pesto_rce-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.pesto_rce-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.pesto_rce-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.pesto_rce-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.pesto_rce-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.pesto_rce-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.pesto_rce-redirectscheme.redirectscheme.permanent=true"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
-    storage_opt:
-      size: '5G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
     healthcheck:
       test: "curl -f http://localhost:50051/healthz || exit 1"
       interval: 15s
@@ -229,10 +210,10 @@ services:
           memory: 100MB
           cpus: '0.10'
     networks:
-      - pesto
-      - internal
+      - public-web
+      - pesto-internal
 
-  registration:
+  pesto-registration:
     image: ghcr.io/teknologi-umum/pesto-registration:edge
     environment:
       <<: [ *defaults ]
@@ -244,45 +225,38 @@ services:
       RedisUrl: "db:6379"
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=pesto"
-      - "traefik.http.routers.registration.entrypoints=web,websecure"
-      - "traefik.http.routers.registration.rule=Host(`pesto.teknologiumum.com`) && Path(`/api/register`)"
-      - "traefik.http.routers.registration.priority=5"
-      - "traefik.http.routers.registration.tls.certresolver=tlsresolver"
-      - "traefik.http.routers.registration.middlewares=registration-error,registration-header,registration-rate,registration-redirectscheme,registration-inflightreq"
-      - "traefik.http.services.registration.loadbalancer.server.port=80"
-      - "traefik.http.services.registration.loadbalancer.server.scheme=http"
-      - "traefik.http.services.registration.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.registration.loadbalancer.healthcheck.path=/healthz"
-      - "traefik.http.middlewares.registration-error.errors.status=500-599"
-      - "traefik.http.middlewares.registration-error.errors.service=landing@docker"
-      - "traefik.http.middlewares.registration-error.errors.query=/500"
-      - "traefik.http.middlewares.registration-rate.ratelimit.average=100"
-      - "traefik.http.middlewares.registration-rate.ratelimit.burst=10"
-      - "traefik.http.middlewares.registration-rate.ratelimit.period=1m"
-      - "traefik.http.middlewares.registration-header.headers.accesscontrolallowmethods=GET,OPTIONS,POST"
-      - "traefik.http.middlewares.registration-header.headers.accesscontrolalloworiginlist=*"
-      - "traefik.http.middlewares.registration-header.headers.accesscontrolmaxage=604800"
-      - "traefik.http.middlewares.registration-header.headers.addvaryheader=true"
-      - "traefik.http.middlewares.registration-header.headers.frameDeny=true"
-      - "traefik.http.middlewares.registration-header.headers.browserxssfilter=true"
-      - "traefik.http.middlewares.registration-header.headers.stsSeconds=604800"
-      - "traefik.http.middlewares.registration-header.headers.stsIncludeSubdomains=true"
-      - "traefik.http.middlewares.registration-header.headers.browserXssFilter=true"
-      - "traefik.http.middlewares.registration-header.headers.contentTypeNosniff=true"
-      - "traefik.http.middlewares.registration-header.headers.customResponseHeaders.server=Teknologi Umum"
-      - "traefik.http.middlewares.registration-redirectscheme.redirectscheme.scheme=https"
-      - "traefik.http.middlewares.registration-redirectscheme.redirectscheme.permanent=true"
-      - "traefik.http.middlewares.registration-inflightreq.inflightreq.amount=50"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.pesto_registration.entrypoints=web,websecure"
+      - "traefik.http.routers.pesto_registration.rule=Host(`pesto.teknologiumum.com`) && Path(`/api/register`)"
+      - "traefik.http.routers.pesto_registration.priority=5"
+      - "traefik.http.routers.pesto_registration.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.pesto_registration.middlewares=pesto_registration-error,pesto_registration-header,pesto_registration-rate,pesto_registration-redirectscheme,pesto_registration-inflightreq"
+      - "traefik.http.services.pesto_registration.loadbalancer.server.port=80"
+      - "traefik.http.services.pesto_registration.loadbalancer.server.scheme=http"
+      - "traefik.http.services.pesto_registration.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.pesto_registration.loadbalancer.healthcheck.path=/healthz"
+      - "traefik.http.middlewares.pesto_registration-error.errors.status=500-599"
+      - "traefik.http.middlewares.pesto_registration-error.errors.service=pesto_landing@docker"
+      - "traefik.http.middlewares.pesto_registration-error.errors.query=/500"
+      - "traefik.http.middlewares.pesto_registration-rate.ratelimit.average=100"
+      - "traefik.http.middlewares.pesto_registration-rate.ratelimit.burst=10"
+      - "traefik.http.middlewares.pesto_registration-rate.ratelimit.period=1m"
+      - "traefik.http.middlewares.pesto_registration-header.headers.accesscontrolallowmethods=GET,OPTIONS,POST"
+      - "traefik.http.middlewares.pesto_registration-header.headers.accesscontrolalloworiginlist=*"
+      - "traefik.http.middlewares.pesto_registration-header.headers.accesscontrolmaxage=604800"
+      - "traefik.http.middlewares.pesto_registration-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.pesto_registration-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.pesto_registration-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.pesto_registration-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.pesto_registration-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.pesto_registration-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.pesto_registration-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.pesto_registration-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.pesto_registration-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.pesto_registration-redirectscheme.redirectscheme.permanent=true"
+      - "traefik.http.middlewares.pesto_registration-inflightreq.inflightreq.amount=50"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
-    storage_opt:
-      size: '1G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
     healthcheck:
       test: "curl -f http://localhost:80/healthz || exit 1"
       interval: 15s
@@ -306,19 +280,12 @@ services:
           memory: 25MB
           cpus: '0.10'
     networks:
-      - pesto
-      - internal
+      - pesto-internal
+      - public-web
 
 networks:
-  pesto:
-    driver: bridge
-    external: true
-    ipam:
-      config:
-        - subnet: 10.32.50.0/27
-  internal:
-    driver: bridge
+  pesto-internal:
     external: false
-    ipam:
-      config:
-        - subnet: 10.32.50.32/27
+
+  public-web:
+    external: true

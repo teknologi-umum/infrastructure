@@ -5,7 +5,7 @@ services:
       BLUR_NSFW: on
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=nitter"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.nitter.entrypoints=web,websecure"
       - "traefik.http.routers.nitter.rule=Host(`nitter.teknologiumum.com`)"
       - "traefik.http.routers.nitter.priority=1"
@@ -35,13 +35,6 @@ services:
     platform: linux/amd64
     volumes:
       - ./nitter.conf:/src/nitter.conf:Z,ro
-    storage_opt:
-      size: '1G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
     healthcheck:
       test: wget -nv --tries=1 --spider http://127.0.0.1:8080/Jack/status/20 || exit 1
       interval: 60s
@@ -68,8 +61,8 @@ services:
     cap_drop:
       - ALL
     networks:
-      - nitter
-      - nitter_internal
+      - public-web
+      - nitter-internal
     depends_on:
       nitter-redis:
         condition: service_healthy
@@ -80,11 +73,6 @@ services:
     command: redis-server --save 60 1 --loglevel warning
     volumes:
       - nitter-redis:/data
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
     deploy:
       mode: replicated
       replicas: 1
@@ -111,20 +99,14 @@ services:
     cap_drop:
       - ALL
     networks:
-      - nitter_internal
+      - nitter-internal
 
 volumes:
   nitter-redis:
 
 networks:
-  nitter:
+  public-web:
     external: true
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.1.7.0/28
-  nitter_internal:
+
+  nitter-internal:
     external: false
-    ipam:
-      config:
-        - subnet: 10.1.7.16/28
