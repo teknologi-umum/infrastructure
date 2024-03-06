@@ -3,6 +3,7 @@ services:
     image: ghcr.io/teknologi-umum/tgif:edge
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.tgif.entrypoints=web,websecure"
       - "traefik.http.routers.tgif.rule=Host(`tgif.teknologiumum.com`)"
       - "traefik.http.routers.tgif.tls.certresolver=tlsresolver"
@@ -46,17 +47,8 @@ services:
           memory: 100MB
           cpus: '0.10'
     networks:
-      - tgif
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
+      - public-web
 
 networks:
-  tgif:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.21.96/28

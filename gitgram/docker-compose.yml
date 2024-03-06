@@ -10,6 +10,7 @@ services:
       IGNORE_PRIVATE_REPOSITORY: true
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.gitgram_teknum.entrypoints=web,websecure"
       - "traefik.http.routers.gitgram_teknum.rule=Host(`teknum.gitgram.teknologiumum.com`)"
       - "traefik.http.routers.gitgram_teknum.priority=1"
@@ -54,12 +55,7 @@ services:
           memory: 100MB
           cpus: '0.10'
     networks:
-      - gitgram
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
+      - public-web
 
   gitgram_tokobapak:
     image: ghcr.io/teknologi-umum/gitgram:edge
@@ -72,6 +68,7 @@ services:
       IGNORE_PRIVATE_REPOSITORY: true
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.gitgram_tokobapak.entrypoints=web,websecure"
       - "traefik.http.routers.gitgram_tokobapak.rule=Host(`tokobapak.gitgram.teknologiumum.com`)"
       - "traefik.http.routers.gitgram_tokobapak.priority=1"
@@ -116,17 +113,8 @@ services:
           memory: 100MB
           cpus: '0.10'
     networks:
-      - gitgram
-    logging:
-      driver: json-file
-      options:
-        max-size: 100M
-        max-file: 3
+      - public-web
 
 networks:
-  gitgram:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 10.2.3.0/28

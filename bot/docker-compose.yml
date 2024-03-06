@@ -28,18 +28,3 @@ services:
         reservations:
           memory: 50MB
           cpus: '0.10'
-    networks:
-      - bot
-    logging:
-      driver: json-file
-      options:
-        max-size: 50M
-        max-file: 3
-
-networks:
-  bot:
-    driver: bridge
-    external: true
-    ipam:
-      config:
-        - subnet: 172.16.21.112/28

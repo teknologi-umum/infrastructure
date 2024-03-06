@@ -5,6 +5,7 @@ services:
       BLUR_NSFW: on
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.libreddit.entrypoints=web,websecure"
       - "traefik.http.routers.libreddit.rule=Host(`libreddit.teknologiumum.com`)"
       - "traefik.http.routers.libreddit.priority=1"
@@ -32,18 +33,6 @@ services:
       - "traefik.http.middlewares.libreddit-redirectscheme.redirectscheme.permanent=true"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
-    storage_opt:
-      size: '1G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
-    healthcheck:
-      test: wget -q -S -O - http://localhost:8080
-      interval: 60s
-      timeout: 10s
-      retries: 5
     deploy:
       mode: replicated
       replicas: 1
@@ -59,12 +48,38 @@ services:
           memory: 25MB
           cpus: '0.10'
     networks:
-      - libreddit
+      - public-web
+
+  redlib:
+    image: quay.io/redlib/redlib:latest
+    environment:
+      BLUR_NSFW: on
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.services.libreddit.loadbalancer.server.port=8080"
+      - "traefik.http.services.libreddit.loadbalancer.server.scheme=http"
+      - "traefik.http.services.libreddit.loadbalancer.healthcheck.interval=120s"
+      - "traefik.http.services.libreddit.loadbalancer.healthcheck.path=/settings"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 750MB
+          cpus: '1'
+        reservations:
+          memory: 25MB
+          cpus: '0.10'
+    networks:
+      - public-web
 
 networks:
-  libreddit:
+  public-web:
     external: true
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.16.21.32/28

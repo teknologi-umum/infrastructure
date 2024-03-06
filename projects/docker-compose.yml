@@ -3,10 +3,11 @@ services:
     image: ghcr.io/rushkii/abyss-card:edge
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.projects-abyss-card.entrypoints=web,websecure"
       - "traefik.http.routers.projects-abyss-card.rule=Host(`abyss-card.projects.teknologiumum.com`)"
       - "traefik.http.routers.projects-abyss-card.tls.certresolver=tlsresolver"
-      - "traefik.http.routers.projects-abyss-card.middlewares=tgif-header,tgif-rate,tgif-redirectscheme"
+      - "traefik.http.routers.projects-abyss-card.middlewares=projects-abyss-card-header,projects-abyss-card-rate,projects-abyss-card-redirectscheme"
       - "traefik.http.services.projects-abyss-card.loadbalancer.server.port=3000"
       - "traefik.http.services.projects-abyss-card.loadbalancer.server.scheme=http"
       - "traefik.http.services.projects-abyss-card.loadbalancer.healthcheck.interval=60s"
@@ -46,17 +47,8 @@ services:
           memory: 100MB
           cpus: '0.10'
     networks:
-      - projects
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
+      - public-web
 
 networks:
-  projects:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.30.0/24

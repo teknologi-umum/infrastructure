@@ -11,6 +11,7 @@ services:
       SENTRY_DSN:
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.graphene.entrypoints=web,websecure"
       - "traefik.http.routers.graphene.rule=Host(`graphene.teknologiumum.com`)"
       - "traefik.http.routers.graphene.tls.certresolver=tlsresolver"
@@ -55,18 +56,9 @@ services:
         reservations:
           memory: 200MB
           cpus: '0.20'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
     networks:
-      - graphene
+      - public-web
 
 networks:
-  graphene:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.21.64/28

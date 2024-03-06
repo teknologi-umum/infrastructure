@@ -3,6 +3,7 @@ services:
     image: ghcr.io/teknologi-umum/zod-playground:edge
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.zod_playground.entrypoints=web,websecure"
       - "traefik.http.routers.zod_playground.rule=Host(`zod.teknologiumum.com`)"
       - "traefik.http.routers.zod_playground.tls.certresolver=tlsresolver"
@@ -46,17 +47,8 @@ services:
           memory: 10MB
           cpus: '0.10'
     networks:
-      - zod_playground
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
+      - public-web
 
 networks:
-  zod_playground:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.21.128/28

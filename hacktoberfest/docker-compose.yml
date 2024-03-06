@@ -13,6 +13,7 @@ services:
       SENTRY_DSN:
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.hacktoberfest_frontend.entrypoints=web,websecure"
       - "traefik.http.routers.hacktoberfest_frontend.rule=Host(`hacktoberfest.teknologiumum.com`) && PathPrefix(`/`)"
       - "traefik.http.routers.hacktoberfest_frontend.priority=1"
@@ -61,12 +62,8 @@ services:
           memory: 10MB
           cpus: '0.10'
     networks:
-      - hacktoberfest
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
+      - public-web
+
   backend:
     build: ./backend
     environment:
@@ -78,6 +75,7 @@ services:
       SENTRY_DSN:
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.hacktoberfest_backend.entrypoints=web,websecure"
       - "traefik.http.routers.hacktoberfest_backend.rule=Host(`hacktoberfest.teknologiumum.com`) && PathPrefix(`/api`)"
       - "traefik.http.routers.hacktoberfest_backend.priority=2"
@@ -125,17 +123,8 @@ services:
           memory: 10MB
           cpus: '0.10'
     networks:
-      - hacktoberfest
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 3
+      - public-web
 
 networks:
-  hacktoberfest:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.21.48/28

@@ -107,8 +107,6 @@ services:
       - "traefik.http.middlewares.ohmyform-redirectscheme.redirectscheme.permanent=true"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
-    storage_opt:
-      size: '10G'
     logging:
       driver: json-file
       options:

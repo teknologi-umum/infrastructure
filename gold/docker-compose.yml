@@ -5,12 +5,12 @@ services:
     build: .
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=gold"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.gold.entrypoints=web,websecure"
       - "traefik.http.routers.gold.rule=Host(`gold.teknologiumum.com`)"
       - "traefik.http.routers.gold.tls.certresolver=tlsresolver"
       - "traefik.http.routers.gold.middlewares=gold-header,gold-rate,gold-redirectscheme"
-      - "traefik.http.services.gold.loadbalancer.server.port=7390"
+      - "traefik.http.services.gold.loadbalancer.server.port=7830"
       - "traefik.http.services.gold.loadbalancer.server.scheme=http"
       - "traefik.http.services.gold.loadbalancer.healthcheck.interval=30s"
       - "traefik.http.services.gold.loadbalancer.healthcheck.path=/_ping"
@@ -30,7 +30,7 @@ services:
       # - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
     healthcheck:
-      test: curl -f http://localhost:7390/_ping || exit 1
+      test: curl -f http://localhost:7830/_ping || exit 1
       interval: 15s
       timeout: 10s
       retries: 5
@@ -49,17 +49,14 @@ services:
           memory: 10M
           cpus: '0.05'
     networks:
-      - gold
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 1
+      - public-web
+    volumes:
+      - gold-database:/var/lib/teknologi-umum/gold
+
+volumes:
+  gold-database:
+    external: true
 
 networks:
-  gold:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.20.0/28

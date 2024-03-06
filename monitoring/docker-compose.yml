@@ -60,6 +60,7 @@ services:
       - ./grafana-datasource.yml:/etc/grafana/provisioning/datasources/datasource.yml
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.grafana.entrypoints=web,websecure"
       - "traefik.http.routers.grafana.rule=Host(`grafana.teknologiumum.com`)"
       - "traefik.http.routers.grafana.tls.certresolver=tlsresolver"
@@ -78,6 +79,7 @@ services:
         condition: service_healthy
     networks:
       - monitoring
+      - public-web
 
 volumes:
   prometheus-data:
@@ -85,4 +87,4 @@ volumes:
 
 networks:
   monitoring:
-    external: true
+    external: false

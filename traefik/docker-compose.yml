@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v2.10.5
+    image: traefik:v2.11.0
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
@@ -23,7 +23,7 @@ services:
       - "--entryPoints.metrics.address=:8082"
       - "--metrics.prometheus.entryPoint=metrics"
     environment:
-      - TZ=UTC
+      TZ: "UTC"
     ports:
       # The HTTP port
       - "0.0.0.0:80:80"
@@ -34,18 +34,11 @@ services:
       - "[::]:443:443/udp"
       # The Web UI (enabled by --api.insecure=true)
       - "192.168.193.179:8080:8080"
-    platform: linux/amd64
-    storage_opt:
-      size: '1G'
-    logging:
-      driver: json-file
-      options:
-        max-size: 10m
-        max-file: 3
+    platform: "linux/amd64"
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock
-      - "./letsencrypt:/letsencrypt"
+      - "traefik-letsencrypt:/letsencrypt"
       - "./confs:/confs"
     healthcheck:
       test: traefik healthcheck --ping
@@ -58,74 +51,28 @@ services:
       restart_policy:
         condition: unless-stopped
         delay: 30s
-        # max_attempts: 10
         window: 120s
       resources:
         limits:
           memory: 4GB
-          cpus: '4'
+          cpus: "4"
         reservations:
           memory: 100MB
-          cpus: '0.10'
+          cpus: "0.10"
     networks:
-      - pesto
-      - hacktoberfest
-      - gitgram
-      - default
-      - captcha
-      - mastodon
-      - polarite
-      - libreddit
-      - graphene
-      - tgif
-      - zod_playground
-      - projects
-      - conference
-      - gold
-      - monitoring
-      - pph21
+      - public-web
+
+volumes:
+  traefik-letsencrypt:
 
 networks:
-  pesto:
+  public-web:
+    external: true
     driver: bridge
-    external: true
-  hacktoberfest:
-    driver: bridge
-    external: true
-  gitgram:
-    driver: bridge
-    external: true
-  captcha:
-    driver: bridge
-    external: true
-  mastodon:
-    driver: bridge
-    external: true
-  polarite:
-    driver: bridge
-    external: true
-  libreddit:
-    driver: bridge
-    external: true
-  graphene:
-    driver: bridge
-    external: true
-  tgif:
-    driver: bridge
-    external: true
-  zod_playground:
-    driver: bridge
-    external: true
-  projects:
-    driver: bridge
-    external: true
-  nitter:
-    external: true
-  conference:
-    external: true
-  gold:
-    external: true
+    ipam:
+      config:
+        # Usable Host IP Range: 172.31.0.1 - 172.31.3.254
+        # Number of Usable Hosts: 1,022
+        - subnet: 172.31.0.0/22
   monitoring:
-    external: true
-  pph21:
     external: true

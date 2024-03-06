@@ -3,7 +3,7 @@ services:
     image: ghcr.io/teknologi-umum/pph21:edge
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=pph21"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.pph21.entrypoints=web,websecure"
       - "traefik.http.routers.pph21.rule=Host(`pph21.teknologiumum.com`)"
       - "traefik.http.routers.pph21.tls.certresolver=tlsresolver"
@@ -47,17 +47,8 @@ services:
           memory: 10M
           cpus: '0.05'
     networks:
-      - pph21
-    logging:
-      driver: json-file
-      options:
-        max-size: 10M
-        max-file: 1
+      - public-web
 
 networks:
-  pph21:
-    driver: bridge
+  public-web:
     external: true
-    ipam:
-      config:
-        - subnet: 172.16.20.16/28
