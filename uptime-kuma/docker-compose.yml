@@ -1,8 +1,6 @@
 services:
   uptime-kuma:
     image: louislam/uptime-kuma:1
-    ports:
-      - 127.0.0.1:43241:3001
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.uptime-kuma.entrypoints=web,websecure"
@@ -42,3 +40,7 @@ services:
 
 volumes:
   uptime-data:
+
+networks:
+  public-web:
+    external: true

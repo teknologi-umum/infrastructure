@@ -5,12 +5,31 @@ services:
     environment:
       GOPROXY: "https://proxy.golang.org,https://goproxy.io,direct"
       GOMAXPROCS: 1
-    ports:
-      - 127.0.0.1:8081:8080
     volumes:
       - goproxy-storage:/go
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
+      - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.goproxy.entrypoints=web,websecure"
+      - "traefik.http.routers.goproxy.rule=Host(`goproxy.teknologiumum.com`)"
+      - "traefik.http.routers.goproxy.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.goproxy.middlewares=goproxy-header,goproxy-redirectscheme"
+      - "traefik.http.services.goproxy.loadbalancer.server.port=8080"
+      - "traefik.http.services.goproxy.loadbalancer.server.scheme=http"
+      - "traefik.http.services.goproxy.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.middlewares.goproxy-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.goproxy-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.goproxy-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.goproxy-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.goproxy-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.goproxy-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.goproxy-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.goproxy-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.goproxy-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.goproxy-redirectscheme.redirectscheme.permanent=true"
+    networks:
+      - public-web
     deploy:
       mode: replicated
       replicas: 1
@@ -26,4 +45,8 @@ services:
 
 volumes:
   goproxy-storage:
+    external: true
+
+networks:
+  public-web:
     external: true
