@@ -4,7 +4,7 @@ SERVICE_MAPPING = {
         "bot",
         "captcha",
         "gitgram",
-        "gold",
+        # "gold", We'll skip gold for now as it's private repository
         "graphene",
         "libreddit",
         "monitoring",
@@ -35,5 +35,3 @@ if __name__ == "__main__":
     for server, containers in SERVICE_MAPPING.items():
         # SSH to server
         # Copy directory with rsync
-
-    
