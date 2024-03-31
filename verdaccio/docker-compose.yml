@@ -1,12 +1,31 @@
 services:
   verdaccio:
     image: verdaccio/verdaccio:5
-    ports:
-      - 127.0.0.1:4873:4873
     volumes:
       - verdaccio-storage:/verdaccio/storage
     labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.verdaccio.entrypoints=web,websecure"
+      - "traefik.http.routers.verdaccio.rule=Host(`npmjs.teknologiumum.com`)"
+      - "traefik.http.routers.verdaccio.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.verdaccio.middlewares=verdaccio-header,verdaccio-redirectscheme"
+      - "traefik.http.services.verdaccio.loadbalancer.server.port=4873"
+      - "traefik.http.services.verdaccio.loadbalancer.server.scheme=http"
+      - "traefik.http.services.verdaccio.loadbalancer.healthcheck.interval=120s"
+      - "traefik.http.services.verdaccio.loadbalancer.healthcheck.path=/"
+      - "traefik.http.middlewares.verdaccio-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.verdaccio-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.verdaccio-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.verdaccio-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.verdaccio-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.verdaccio-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.verdaccio-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.verdaccio-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.verdaccio-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.verdaccio-redirectscheme.redirectscheme.permanent=true"
       - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - public-web
     deploy:
       mode: replicated
       replicas: 1
@@ -22,4 +41,8 @@ services:
 
 volumes:
   verdaccio-storage:
+    external: true
+
+networks:
+  public-web:
     external: true
