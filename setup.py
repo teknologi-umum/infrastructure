@@ -107,7 +107,7 @@ if __name__ == "__main__":
             for container in containers:
                 print(f"Running commands for {container} on {server}")
                 _, o1, e1 = client.exec_command(
-                    f"echo '{SUDO_PASSWORD[server]}' | sudo -S bash -c 'cd {container}; if [ -f \"setup.sh\" ]; then\n  sudo ./setup.sh\nfi'"
+                    f"echo '{SUDO_PASSWORD[server]}' | sudo -S bash -c 'cd {container}; if [ -f \"setup.sh\" ]; then\n  chmod +x setup.sh && sudo ./setup.sh\nfi'"
                 )
                 for c in iter(lambda: o1.read(1), b""):
                     sys.stdout.buffer.write(c)

@@ -15,7 +15,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=public-web"
       - "traefik.http.routers.hacktoberfest_frontend.entrypoints=web,websecure"
-      - "traefik.http.routers.hacktoberfest_frontend.rule=Host(`hacktoberfest.teknologiumum.com`) && PathPrefix(`/`)"
+      - "traefik.http.routers.hacktoberfest_frontend.rule=Host(`hacktoberfest.teknologiumum.com`)"
       - "traefik.http.routers.hacktoberfest_frontend.priority=1"
       - "traefik.http.routers.hacktoberfest_frontend.tls.certresolver=tlsresolver"
       - "traefik.http.routers.hacktoberfest_frontend.middlewares=hacktoberfest_frontend-error,hacktoberfest_frontend-header,hacktoberfest_frontend-rate,hacktoberfest_frontend-redirectscheme,hacktoberfest_frontend-compress"

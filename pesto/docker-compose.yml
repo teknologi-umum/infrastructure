@@ -88,7 +88,7 @@ services:
       - pesto-internal
     volumes:
       - ../redis:/data
-  
+
   pesto-auth:
     image: ghcr.io/teknologi-umum/pesto-auth:edge
     environment:
@@ -108,8 +108,8 @@ services:
       - "traefik.http.middlewares.pesto_auth-error.errors.status=500-599"
       - "traefik.http.middlewares.pesto_auth-error.errors.service=pesto_landing@docker"
       - "traefik.http.middlewares.pesto_auth-error.errors.query=/500"
-      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.average=20"
-      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.burst=5"
+      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.average=350"
+      - "traefik.http.middlewares.pesto_auth-rate.ratelimit.burst=20"
       - "traefik.http.middlewares.pesto_auth-rate.ratelimit.period=1s"
       - "traefik.http.middlewares.pesto_auth-header.headers.addvaryheader=true"
       - "traefik.http.middlewares.pesto_auth-header.headers.frameDeny=true"
@@ -122,13 +122,13 @@ services:
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
     healthcheck:
-      test: "curl -f http://localhost:3000/healthz || exit 1"
+      test: "wget -q --spider http://localhost:3000/healthz || exit 1"
       interval: 15s
       timeout: 10s
       retries: 5
     deploy:
       mode: replicated
-      replicas: 2
+      replicas: 1
       restart_policy:
         condition: unless-stopped
         delay: 30s
@@ -172,8 +172,8 @@ services:
       - "traefik.http.middlewares.pesto_rce-error.errors.status=500-599"
       - "traefik.http.middlewares.pesto_rce-error.errors.service=pesto_landing@docker"
       - "traefik.http.middlewares.pesto_rce-error.errors.query=/500"
-      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.average=60"
-      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.burst=5"
+      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.average=350"
+      - "traefik.http.middlewares.pesto_rce-rate.ratelimit.burst=50"
       - "traefik.http.middlewares.pesto_rce-rate.ratelimit.period=1m"
       - "traefik.http.middlewares.pesto_rce-header.headers.accesscontrolallowmethods=GET,OPTIONS,POST"
       - "traefik.http.middlewares.pesto_rce-header.headers.accesscontrolalloworiginlist=*"
@@ -217,12 +217,10 @@ services:
     image: ghcr.io/teknologi-umum/pesto-registration:edge
     environment:
       <<: [ *defaults ]
-      PORT: "80"
+      PORT: "3000"
       SENTRY_DSN: ${REGISTRATION_SENTRY_DSN}
-      Sentry__Dsn: ${REGISTRATION_SENTRY_DSN}
-      Sentry__Debug: false
-      Sentry__Environment: production
-      RedisUrl: "db:6379"
+      REDIS_URL: "redis://@db:6379/"
+      MAILERSEND_API_KEY:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=public-web"
@@ -231,10 +229,6 @@ services:
       - "traefik.http.routers.pesto_registration.priority=5"
       - "traefik.http.routers.pesto_registration.tls.certresolver=tlsresolver"
       - "traefik.http.routers.pesto_registration.middlewares=pesto_registration-error,pesto_registration-header,pesto_registration-rate,pesto_registration-redirectscheme,pesto_registration-inflightreq"
-      - "traefik.http.services.pesto_registration.loadbalancer.server.port=80"
-      - "traefik.http.services.pesto_registration.loadbalancer.server.scheme=http"
-      - "traefik.http.services.pesto_registration.loadbalancer.healthcheck.interval=30s"
-      - "traefik.http.services.pesto_registration.loadbalancer.healthcheck.path=/healthz"
       - "traefik.http.middlewares.pesto_registration-error.errors.status=500-599"
       - "traefik.http.middlewares.pesto_registration-error.errors.service=pesto_landing@docker"
       - "traefik.http.middlewares.pesto_registration-error.errors.query=/500"
@@ -255,10 +249,14 @@ services:
       - "traefik.http.middlewares.pesto_registration-redirectscheme.redirectscheme.scheme=https"
       - "traefik.http.middlewares.pesto_registration-redirectscheme.redirectscheme.permanent=true"
       - "traefik.http.middlewares.pesto_registration-inflightreq.inflightreq.amount=50"
+      - "traefik.http.services.pesto_registration.loadbalancer.server.port=3000"
+      - "traefik.http.services.pesto_registration.loadbalancer.server.scheme=http"
+      - "traefik.http.services.pesto_registration.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.pesto_registration.loadbalancer.healthcheck.path=/healthz"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
     healthcheck:
-      test: "curl -f http://localhost:80/healthz || exit 1"
+      test: "wget -q --spider http://localhost:3000/healthz || exit 1"
       interval: 15s
       timeout: 10s
       retries: 5
@@ -274,7 +272,7 @@ services:
         window: 120s
       resources:
         limits:
-          memory: 2GB
+          memory: 500MB
           cpus: '1'
         reservations:
           memory: 25MB
