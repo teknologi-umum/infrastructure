@@ -141,3 +141,8 @@ jobs:
 
       - name: Execute setup file
         run: python3 ./setup.py
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          TANZANITE_SUDO_PASSWORD: ${{ secrets.TANZANITE_SUDO_PASSWORD }}
+          PAINITE_SUDO_PASSWORD: ${{ secrets.PAINITE_SUDO_PASSWORD }}
+          HIBONITE_SUDO_PASSWORD: ${{ secrets.HIBONITE_SUDO_PASSWORD }}
