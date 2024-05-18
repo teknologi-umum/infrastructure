@@ -61,7 +61,8 @@ services:
 
 volumes:
   polarite-data:
-
+    external: true
+    
 networks:
   public-web:
     external: true

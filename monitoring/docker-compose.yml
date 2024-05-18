@@ -87,4 +87,4 @@ volumes:
 
 networks:
   monitoring:
-    external: false
+    external: true

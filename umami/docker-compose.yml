@@ -3,8 +3,32 @@ services:
     image: ghcr.io/umami-software/umami:postgresql-latest
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-    ports:
-      - "23120:3000"
+      - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.umami.entrypoints=web,websecure"
+      - "traefik.http.routers.umami.rule=Host(`analytics.teknologiumum.com`)"
+      - "traefik.http.routers.umami.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.umami.middlewares=umami-header,umami-rate,umami-redirectscheme"
+      - "traefik.http.services.umami.loadbalancer.server.port=3000"
+      - "traefik.http.services.umami.loadbalancer.server.scheme=http"
+      - "traefik.http.services.umami.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.umami.loadbalancer.healthcheck.path=/api/heartbeat"
+      - "traefik.http.middlewares.umami-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.umami-rate.ratelimit.burst=100"
+      - "traefik.http.middlewares.umami-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.umami-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.umami-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.umami-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.umami-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.umami-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.umami-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.umami-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.umami-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.umami-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.umami-redirectscheme.redirectscheme.permanent=true"
+    networks:
+      - public-web
+      - umami-internal
     environment:
       DATABASE_URL:
       DATABASE_TYPE: postgresql
@@ -31,6 +55,7 @@ services:
       options:
         max-size: 10M
         max-file: 3
+
   db:
     image: postgres:16-alpine
     environment:
@@ -39,6 +64,8 @@ services:
       POSTGRES_PASSWORD:
     volumes:
       - umami-db-data:/var/lib/postgresql/data
+    networks:
+      - umami-internal
     deploy:
       restart_policy:
         condition: unless-stopped
@@ -57,4 +84,9 @@ services:
 
 volumes:
   umami-db-data:
+    external: true
+
+networks:
+  umami-internal:
+  public-web:
     external: true

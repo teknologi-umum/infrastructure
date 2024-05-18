@@ -1,6 +1,6 @@
 services:
   libreddit:
-    image: libreddit/libreddit:latest
+    image: quay.io/redlib/redlib:latest
     environment:
       BLUR_NSFW: on
     labels:
@@ -31,36 +31,6 @@ services:
       - "traefik.http.middlewares.libreddit-header.headers.customResponseHeaders.server=Teknologi Umum"
       - "traefik.http.middlewares.libreddit-redirectscheme.redirectscheme.scheme=https"
       - "traefik.http.middlewares.libreddit-redirectscheme.redirectscheme.permanent=true"
-      - "com.centurylinklabs.watchtower.enable=true"
-    platform: linux/amd64
-    deploy:
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: unless-stopped
-        delay: 30s
-        window: 120s
-      resources:
-        limits:
-          memory: 750MB
-          cpus: '1'
-        reservations:
-          memory: 25MB
-          cpus: '0.10'
-    networks:
-      - public-web
-
-  redlib:
-    image: quay.io/redlib/redlib:latest
-    environment:
-      BLUR_NSFW: on
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=public-web"
-      - "traefik.http.services.libreddit.loadbalancer.server.port=8080"
-      - "traefik.http.services.libreddit.loadbalancer.server.scheme=http"
-      - "traefik.http.services.libreddit.loadbalancer.healthcheck.interval=120s"
-      - "traefik.http.services.libreddit.loadbalancer.healthcheck.path=/settings"
       - "com.centurylinklabs.watchtower.enable=true"
     platform: linux/amd64
     deploy:
