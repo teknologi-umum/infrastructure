@@ -3,6 +3,7 @@ services:
     image: louislam/uptime-kuma:1
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
       - "traefik.http.routers.uptime-kuma.entrypoints=web,websecure"
       - "traefik.http.routers.uptime-kuma.rule=Host(`status.teknologiumum.com`)"
       - "traefik.http.routers.uptime-kuma.tls.certresolver=tlsresolver"
@@ -37,6 +38,8 @@ services:
       options:
         max-size: 10M
         max-file: 3
+    networks:
+      - public-web
 
 volumes:
   uptime-data:

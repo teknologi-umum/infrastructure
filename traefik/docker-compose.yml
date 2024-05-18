@@ -56,7 +56,6 @@ services:
       resources:
         limits:
           memory: 4GB
-          cpus: "4"
         reservations:
           memory: 100MB
           cpus: "0.10"
