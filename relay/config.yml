@@ -1,0 +1,10 @@
+relay:
+  mode: proxy
+  upstream: https://sentry.teknologiumum.com
+  host: 0.0.0.0
+  port: 3000
+
+spool:
+  envelopes:
+    path: /work/relay-spool
+    max_disk_size: 1GB

@@ -87,7 +87,7 @@ if __name__ == "__main__":
         for container in containers:
             # Copy directory to destination
             subprocess.call(
-                f"rsync -avz --progress {container} {server}:{container}".split(" "),
+                f"rsync -avrz --progress {container}/ {server}:{container}".split(" "),
                 stdout=sys.stdout,
                 stderr=sys.stderr,
             )

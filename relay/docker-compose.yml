@@ -1,0 +1,52 @@
+services:
+  relay:
+    image: getsentry/relay:latest
+    command: run --config /
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=public-web"
+      - "traefik.http.routers.relay.entrypoints=web,websecure"
+      - "traefik.http.routers.relay.rule=Host(`sin.sentry.teknologiumum.com`)"
+      - "traefik.http.routers.relay.tls.certresolver=tlsresolver"
+      - "traefik.http.routers.relay.middlewares=relay-header,relay-rate,relay-redirectscheme"
+      - "traefik.http.services.relay.loadbalancer.server.port=3000"
+      - "traefik.http.services.relay.loadbalancer.server.scheme=http"
+      - "traefik.http.services.relay.loadbalancer.healthcheck.interval=30s"
+      - "traefik.http.services.relay.loadbalancer.healthcheck.path=/api/relay/healthcheck/ready/"
+      - "traefik.http.middlewares.relay-rate.ratelimit.average=200"
+      - "traefik.http.middlewares.relay-rate.ratelimit.burst=300"
+      - "traefik.http.middlewares.relay-rate.ratelimit.period=1s"
+      - "traefik.http.middlewares.relay-header.headers.addvaryheader=true"
+      - "traefik.http.middlewares.relay-header.headers.frameDeny=true"
+      - "traefik.http.middlewares.relay-header.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.relay-header.headers.stsSeconds=604800"
+      - "traefik.http.middlewares.relay-header.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.relay-header.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.relay-header.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.relay-header.headers.customResponseHeaders.server=Teknologi Umum"
+      - "traefik.http.middlewares.relay-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.relay-redirectscheme.redirectscheme.permanent=true"
+      - "com.centurylinklabs.watchtower.enable=true"
+    platform: linux/amd64
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: unless-stopped
+        delay: 30s
+        window: 120s
+      resources:
+        limits:
+          memory: 1GB
+          cpus: '2'
+        reservations:
+          memory: 10M
+          cpus: '0.05'
+    networks:
+      - public-web
+    volumes:
+      - ./config.yml:/config.yml
+
+networks:
+  public-web:
+    external: true
